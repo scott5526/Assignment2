@@ -2,8 +2,7 @@
 File: timeserver.go
 Author: Robinson Thompson
 
-Description: Runs a simple timeserver to pull up a URL page displaying the current time.  	
-	     Support was verified for Windows 7 OS.  Support has not been tested for other OS
+Description: Runs a simple timeserver to pull up a URL page displaying the current time.  		     Support was verified for Windows 7 OS.  Support has not been tested for other OS
 
 Copyright:  All code was written originally by Robinson Thompson with assistance from various
 	    free online resourses.
@@ -18,6 +17,26 @@ import (
 "strconv"
 "time"
 )
+
+/*
+Greeting message
+*/
+func greetingHandler(w http.ResponseWriter, req *http.Request) {
+}
+
+/*
+Login handler.  Displays a html generated login form for the user to provide a name.  Creates a cookie for the user name and redirects them to the home page if a valid user name was provided.  If no valid user name was provided, outputs an error message
+*/
+func loginHandler(w http.ResponseWriter, req *http.Request) {
+}
+
+
+/*
+Logout handler.  Clears user cookie, displays goodbye message for 10 seconds, then redirects user to login form
+*/
+func logoutHandler(w http.ResponseWriter, req *http.Request) {
+}
+
 
 /*
 Handler for time requests.  Outputs the current time in the format:
@@ -53,6 +72,7 @@ func badHandler(w http.ResponseWriter, req *http.Request) {
 Main
 */
 func main() {
+    //Version output & port selection
     version := flag.Bool("V", false, "Version 2.0") //Create a bool flag for version  
     						    //and default to no false
 
@@ -65,11 +85,15 @@ func main() {
         os.Exit(0)
     }
 
+    // URL handling
+    http.HandleFunc("/", greetingHandler)
+    http.HandleFunc("/index.html", greetingHandler)
+    http.HandleFunc("/login?name=", loginHandler)
+    http.HandleFunc("/logout", logoutHandler)
     http.HandleFunc("/time", timeHandler)
-    http.HandleFunc("/", badHandler)
     
     //Check localhose:(specified port #) for incomming connections
-    error := http.ListenAndServe("localhost:" + strconv.Itoa(*portNO), nil)
+    error := http.ListenAndServe("host:" + strconv.Itoa(*portNO), nil)
 
     if error != nil {				// If the specified port is already in use, 
 	fmt.Println("Port already in use")	// output a error message and exit with a 
