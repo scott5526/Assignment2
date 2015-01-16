@@ -28,6 +28,16 @@ func greetingHandler(w http.ResponseWriter, req *http.Request) {
 Login handler.  Displays a html generated login form for the user to provide a name.  Creates a cookie for the user name and redirects them to the home page if a valid user name was provided.  If no valid user name was provided, outputs an error message
 */
 func loginHandler(w http.ResponseWriter, req *http.Request) {
+    fmt.Fprintf(w, "<html>" +
+    "<body>" +
+    "<form action=login>" +
+  	"What is your name, Earthling?" +
+    "<input type=text name=name size=50>" +
+    "<input type=submit>" +
+    "</form>" +
+    "</p>" +
+    "</body>" +
+    "</html>")
 }
 
 
@@ -45,6 +55,19 @@ Hour:Minute:Second PM/AM
 */
 func timeHandler(w http.ResponseWriter, r *http.Request) {
     currTime := time.Now().Format("03:04:05 PM")
+    utcTime := time.Now().UTC()
+    utcTime = time.Date(
+        time.Now().UTC().Year(),
+        time.Now().UTC().Month(),
+        time.Now().UTC().Day(),
+        time.Now().UTC().Hour(),
+        time.Now().UTC().Minute(),
+        time.Now().UTC().Second(),
+        time.Now().UTC().Nanosecond(),
+        time.UTC,
+    )
+    utcTime.UTC()
+    //utcTime.Format("03:04:05 07")
 
     fmt.Fprintf(w, "<html>" +
     "<head>" +
@@ -55,9 +78,14 @@ func timeHandler(w http.ResponseWriter, r *http.Request) {
     "<body>" +
     "<p>The time is now <p2>" +
     currTime +
-    "</p2>.</p>" +
+    "</p2><p3>  (" +
+    utcTime.Format("03:04:05") + 
+    " UTC)</p3></p>" +
     "</body>" +
     "</html>")
+
+	
+    //fmt.Fprintf(w, "(" + utcTime.UTC().String() + ")")
 }
 
 /*
@@ -73,7 +101,7 @@ Main
 */
 func main() {
     //Version output & port selection
-    version := flag.Bool("V", false, "Version 2.0") //Create a bool flag for version  
+    version := flag.Bool("V", false, "Version 2.2") //Create a bool flag for version  
     						    //and default to no false
 
     portNO := flag.Int("port", 8080, "")	    //Create a int flag for port selection
@@ -88,12 +116,12 @@ func main() {
     // URL handling
     http.HandleFunc("/", greetingHandler)
     http.HandleFunc("/index.html", greetingHandler)
-    http.HandleFunc("/login?name=", loginHandler)
+    http.HandleFunc("/login", loginHandler)
     http.HandleFunc("/logout", logoutHandler)
     http.HandleFunc("/time", timeHandler)
     
-    //Check localhose:(specified port #) for incomming connections
-    error := http.ListenAndServe("host:" + strconv.Itoa(*portNO), nil)
+    //Check host:(specified port #) for incomming connections
+    error := http.ListenAndServe("localhost:" + strconv.Itoa(*portNO), nil)
 
     if error != nil {				// If the specified port is already in use, 
 	fmt.Println("Port already in use")	// output a error message and exit with a 
