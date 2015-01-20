@@ -12,8 +12,11 @@ package main
 import (
 "flag"
 "fmt"
+"html/template"
+"math/rand"
 "net/http"
 "os"
+//"os/exec"
 "strconv"
 "time"
 )
@@ -26,34 +29,67 @@ var cookieMap = make(map[string]http.Cookie)
 Greeting message
 */
 func greetingHandler(w http.ResponseWriter, r *http.Request) {
-    //Check for existing cookie here <------------------------------
-    //Redirect to login form if necessary here <--------------------
+    redirect := true
+    for _, currCookie := range r.Cookies() {
+    	if (currCookie.Name != "") {
+	    currCookieVal := currCookie.Value
+	    mapCookie := cookieMap[currCookieVal]
+            if (mapCookie.Value != "") {
+		redirect = false
+    		fmt.Fprintf(w, "Greetings, " + mapCookie.Value)
+	    }
+	}
+    }
 
-    fmt.Fprintf(w, "Greetings, ")
+    if redirect == true {
+    	fmt.Fprintf(w, "<html>" +
+    	"<head>" +
+    	"<META http-equiv=refresh content=0;URL=http://localhost:" + strconv.Itoa(*portNO) + "/login>" +
+    	"</head>")
+    }
 }
 
 /*
 Login handler.  Displays a html generated login form for the user to provide a name.  Creates a cookie for the user name and redirects them to the home page if a valid user name was provided.  If no valid user name was provided, outputs an error message
 */
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "<html>" +
-    "<body>" +
-    "<form method=post action=login>" +
-  	"What is your name, Earthling?" +
-    "<input type=text name=name size=50>" +
-    "<input type=submit name=submit>" +
-    "</form>" +
-    "</p>" +
-    "</body>" +
-    "</html>")
+    //tempUUID,_ := exec.Command("uuidgen").Output()
+    // uncomment me (^^^^^^^^^) when testing on linux!!!
+
+    newUUID := strconv.Itoa(rand.Int())
+    // comment me (^^^^^^^^^) when testing on linux!!!
+    //newUUID := string(tempUUID[:])
+    // uncomment me (^^^^^^^^^) when testing on linux!!!
+
+    expDate := time.Now()
+    expDate.AddDate(1,0,0)
+
+    cookie := http.Cookie{Name: "localhost", Value: newUUID, Expires: expDate, HttpOnly: true, MaxAge: 100000, Path: "/"}
+    http.SetCookie(w,&cookie)
+
+    t, _ := template.ParseFiles("login.gtpl")
+    t.Execute(w, nil)
+
     r.ParseForm()
     name := r.PostFormValue("name")
     submit := r.PostFormValue("submit") 
+
     if submit == "Submit" {
     	if name == "" {
-    		fmt.Fprintf(w, "C'mon, I need a name.")
+    		t, _ := template.ParseFiles("badLogin.gtpl")
+        	t.Execute(w, nil)
     	} else {
-		//Add new cookie here <---------------------------
+		mapCookie := http.Cookie{
+		Name: newUUID, 
+		Value: name, 
+		Path: "/", 
+		Domain: "localhost", 
+		Expires: expDate,
+ 		HttpOnly: true, 
+		MaxAge: 100000,
+		}
+
+		cookieMap[newUUID] = mapCookie
 
 		fmt.Fprintf(w, "<html>" +
 		"<head>" +
@@ -66,11 +102,21 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 /*
 Logout handler.  Clears user cookie, displays goodbye message for 10 seconds, then redirects user to login form
 */
-func logoutHandler(w http.ResponseWriter, req *http.Request) {
-    //clear cookie here <--------------------------------
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+   for _, currCookie := range r.Cookies() {
+    	if (currCookie.Name != "") {
+	currCookieVal := currCookie.Value
+	mapCookie := cookieMap[currCookieVal]
+        	if (mapCookie.Value != "") {
+    			delete(cookieMap, currCookieVal)
+			currCookie.MaxAge = -1
+		}
+    	}
+    }
+
     fmt.Fprintf(w, "<html>" +
     "<head>" +
-    "<META http-equiv=refresh content=10;URL=http://localhost:" + strconv.Itoa(*portNO) + "/index.html>"+
+    "<META http-equiv=refresh content=10;URL=http://localhost:" + strconv.Itoa(*portNO) + "/login>"+
     "<body>" +
     "<p>Good-bye.</p>" +
     "</body>" +
@@ -84,6 +130,17 @@ Handler for time requests.  Outputs the current time in the format:
 Hour:Minute:Second PM/AM
 */
 func timeHandler(w http.ResponseWriter, r *http.Request) {
+    user := ""
+    for _, currCookie := range r.Cookies() {
+    	if (currCookie.Name != "") {
+	currCookieVal := currCookie.Value
+	mapCookie := cookieMap[currCookieVal]
+        	if (mapCookie.Value != "") {
+    			user = ", " + mapCookie.Value
+		}
+    	}
+    }
+
     currTime := time.Now().Format("03:04:05 PM")
     utcTime := time.Now().UTC()
     utcTime = time.Date(
@@ -110,8 +167,8 @@ func timeHandler(w http.ResponseWriter, r *http.Request) {
     currTime +
     "</p2><p3>  (" +
     utcTime.Format("03:04:05") + 
-    " UTC), " +
-    //name goes here <-------------------------------
+    " UTC)" +
+    user +
     "</p3></p>" +
     "</body>" +
     "</html>")
@@ -130,7 +187,7 @@ Main
 */
 func main() {
     //Version output & port selection
-    version := flag.Bool("V", false, "Version 2.3") //Create a bool flag for version  
+    version := flag.Bool("V", false, "Version 2.4") //Create a bool flag for version  
     						    //and default to no false
 
     portNO = flag.Int("port", 8080, "")	    //Create a int flag for port selection
