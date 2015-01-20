@@ -18,33 +18,63 @@ import (
 "time"
 )
 
+var currUser string
+var portNO *int
+var cookieMap = make(map[string]http.Cookie)
+
 /*
 Greeting message
 */
-func greetingHandler(w http.ResponseWriter, req *http.Request) {
+func greetingHandler(w http.ResponseWriter, r *http.Request) {
+    //Check for existing cookie here <------------------------------
+    //Redirect to login form if necessary here <--------------------
+
+    fmt.Fprintf(w, "Greetings, ")
 }
 
 /*
 Login handler.  Displays a html generated login form for the user to provide a name.  Creates a cookie for the user name and redirects them to the home page if a valid user name was provided.  If no valid user name was provided, outputs an error message
 */
-func loginHandler(w http.ResponseWriter, req *http.Request) {
+func loginHandler(w http.ResponseWriter, r *http.Request) {
     fmt.Fprintf(w, "<html>" +
     "<body>" +
-    "<form action=login>" +
+    "<form method=post action=login>" +
   	"What is your name, Earthling?" +
     "<input type=text name=name size=50>" +
-    "<input type=submit>" +
+    "<input type=submit name=submit>" +
     "</form>" +
     "</p>" +
     "</body>" +
     "</html>")
-}
+    r.ParseForm()
+    name := r.PostFormValue("name")
+    submit := r.PostFormValue("submit") 
+    if submit == "Submit" {
+    	if name == "" {
+    		fmt.Fprintf(w, "C'mon, I need a name.")
+    	} else {
+		//Add new cookie here <---------------------------
 
+		fmt.Fprintf(w, "<html>" +
+		"<head>" +
+        	"<META http-equiv=refresh content=0;URL=http://localhost:" + strconv.Itoa(*portNO) + "/index.html>" +
+    		"</head>")
+    	}
+    }
+}
 
 /*
 Logout handler.  Clears user cookie, displays goodbye message for 10 seconds, then redirects user to login form
 */
 func logoutHandler(w http.ResponseWriter, req *http.Request) {
+    //clear cookie here <--------------------------------
+    fmt.Fprintf(w, "<html>" +
+    "<head>" +
+    "<META http-equiv=refresh content=10;URL=http://localhost:" + strconv.Itoa(*portNO) + "/index.html>"+
+    "<body>" +
+    "<p>Good-bye.</p>" +
+    "</body>" +
+    "</html>")
 }
 
 
@@ -80,12 +110,11 @@ func timeHandler(w http.ResponseWriter, r *http.Request) {
     currTime +
     "</p2><p3>  (" +
     utcTime.Format("03:04:05") + 
-    " UTC)</p3></p>" +
+    " UTC), " +
+    //name goes here <-------------------------------
+    "</p3></p>" +
     "</body>" +
     "</html>")
-
-	
-    //fmt.Fprintf(w, "(" + utcTime.UTC().String() + ")")
 }
 
 /*
@@ -101,10 +130,10 @@ Main
 */
 func main() {
     //Version output & port selection
-    version := flag.Bool("V", false, "Version 2.2") //Create a bool flag for version  
+    version := flag.Bool("V", false, "Version 2.3") //Create a bool flag for version  
     						    //and default to no false
 
-    portNO := flag.Int("port", 8080, "")	    //Create a int flag for port selection
+    portNO = flag.Int("port", 8080, "")	    //Create a int flag for port selection
 					            //and default to port 8080
     flag.Parse()
 
@@ -114,7 +143,7 @@ func main() {
     }
 
     // URL handling
-    http.HandleFunc("/", greetingHandler)
+    //http.HandleFunc("/", greetingHandler)
     http.HandleFunc("/index.html", greetingHandler)
     http.HandleFunc("/login", loginHandler)
     http.HandleFunc("/logout", logoutHandler)
