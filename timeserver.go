@@ -15,6 +15,7 @@ import (
 "html/template"
 "math/rand"
 "net/http"
+"sync"
 "os"
 //"os/exec"
 "strconv"
@@ -24,6 +25,7 @@ import (
 var currUser string
 var portNO *int
 var cookieMap = make(map[string]http.Cookie)
+var mutex = &sync.Mutex{}
 
 /*
 Greeting message
@@ -33,7 +35,9 @@ func greetingHandler(w http.ResponseWriter, r *http.Request) {
     for _, currCookie := range r.Cookies() {
     	if (currCookie.Name != "") {
 	    currCookieVal := currCookie.Value
+	    mutex.Lock()
 	    mapCookie := cookieMap[currCookieVal]
+	    mutex.Unlock()
             if (mapCookie.Value != "") {
 		redirect = false
     		fmt.Fprintf(w, "Greetings, " + mapCookie.Value)
@@ -88,8 +92,9 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
  		HttpOnly: true, 
 		MaxAge: 100000,
 		}
-
+		mutex.Lock()
 		cookieMap[newUUID] = mapCookie
+		mutex.Unlock()
 
 		fmt.Fprintf(w, "<html>" +
 		"<head>" +
@@ -106,9 +111,13 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
    for _, currCookie := range r.Cookies() {
     	if (currCookie.Name != "") {
 	currCookieVal := currCookie.Value
+	mutex.Lock()
 	mapCookie := cookieMap[currCookieVal]
+	mutex.Unlock()
         	if (mapCookie.Value != "") {
+			mutex.Lock()
     			delete(cookieMap, currCookieVal)
+			mutex.Unlock()
 			currCookie.MaxAge = -1
 		}
     	}
@@ -134,7 +143,9 @@ func timeHandler(w http.ResponseWriter, r *http.Request) {
     for _, currCookie := range r.Cookies() {
     	if (currCookie.Name != "") {
 	currCookieVal := currCookie.Value
+	mutex.Lock()
 	mapCookie := cookieMap[currCookieVal]
+	mutex.Unlock()
         	if (mapCookie.Value != "") {
     			user = ", " + mapCookie.Value
 		}
@@ -187,7 +198,7 @@ Main
 */
 func main() {
     //Version output & port selection
-    version := flag.Bool("V", false, "Version 2.4") //Create a bool flag for version  
+    version := flag.Bool("V", false, "Version 2.5") //Create a bool flag for version  
     						    //and default to no false
 
     portNO = flag.Int("port", 8080, "")	    //Create a int flag for port selection
@@ -195,7 +206,7 @@ func main() {
     flag.Parse()
 
     if *version == true {		//If version outputting selected, output version and 
-        fmt.Println("Version 1.0")	//terminate program with 0 error code
+        fmt.Println("Version 2.5")	//terminate program with 0 error code
         os.Exit(0)
     }
 
